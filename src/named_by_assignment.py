@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict
+import sys
 import operator
 import sympy
 import sympy.stats
@@ -43,7 +44,9 @@ class DictStruct:
         self.__dict__ = contents
 
 
-def build_model(env):
+def model(env=None):
+    if env is None:
+        env = sys._getframe(1).f_locals
     translation = {}
     for name, unnamed in env.items():
         if not isinstance(unnamed, AsYetUnnamed):
@@ -77,8 +80,8 @@ def test():
     x = Normal(0,1)
     y = x*x
     one = sin(x) ** 2 + cos(x) ** 2
-    model = build_model(locals())
-    print("roughly 0:", sample(model.x, size=10000).mean())
-    print("roughly 1:", sample(model.y, size=10000).mean())
-    print("exactly 1s:", sample(model.one, size=10))
+    m = model()
+    print("roughly 0:", sample(m.x, size=10000).mean())
+    print("roughly 1:", sample(m.y, size=10000).mean())
+    print("exactly 1s:", sample(m.one, size=10))
 
