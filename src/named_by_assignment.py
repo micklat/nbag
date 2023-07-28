@@ -125,7 +125,7 @@ def test():
     x = Normal(0,1)
     y = x*x
     one = sin(x) ** 2 + cos(x) ** 2
-    ratio = cost()/ benefit()
+    ratio = cost() / benefit()
     m = model()
     assert sample(m.ratio) > 0
     print("roughly 0:", sample(m.x, size=10000).mean())
