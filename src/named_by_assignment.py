@@ -28,11 +28,11 @@ class AbstractReal(ABC):
 
 class Resolvable(ABC):
     @abstractmethod
-    def resolve(self):
+    def resolve(self, reverse_context):
         ...
 
-def resolve(x):
-    return x.resolve() if isinstance(x, Resolvable) else x
+def resolve(x, reverse_context):
+    return x.resolve(reverse_context) if isinstance(x, Resolvable) else x
 
 
 class Missing():
@@ -46,9 +46,9 @@ class Operation(AbstractReal, Resolvable):
     operands: tuple
     resolved: object = _missing
 
-    def resolve(self):
+    def resolve(self, reverse_context):
         if self.resolved is _missing:
-            self.resolved = self.operator(*map(resolve, self.operands))
+            self.resolved = self.operator(*generalized_map(resolve, self.operands, reverse_context))
         return self.resolved
 
 
@@ -57,18 +57,16 @@ class AutoNamed(AbstractReal, Resolvable):
     constructor: Callable
     args: tuple
     kwargs: Dict[str, object]
-    definition_context: Dict[str, object]
     resolved: object = _missing
 
-    def resolve(self):
+    def resolve(self, reverse_context):
         if self.resolved is _missing:
-            matches = [k for k,v in self.definition_context.items() if v is self]
-            if not matches:
+            name = reverse_context.get(id(self))
+            if not name:
                 raise Exception("no name specified by assignment", self)
-            name = matches[0]
             self.resolved = self.constructor(
-                    name, *map(resolve, self.args), **generalized_map(resolve, self.kwargs))
-            self.definition_context = None
+                    name, *generalized_map(resolve, self.args, reverse_context), 
+                    **generalized_map(resolve, self.kwargs, reverse_context))
         return self.resolved
 
 
@@ -77,8 +75,7 @@ class Wrapper:
     constructor: Callable
         
     def __call__(self, *args, **kwargs):
-        context = sys._getframe(1).f_locals
-        return AutoNamed(self.constructor, args, kwargs, context)
+        return AutoNamed(self.constructor, args, kwargs)
     
 
 class DictStruct:
@@ -94,11 +91,13 @@ def generalized_map(f, x, *args, **kwargs):
     return f(x, *args, **kwargs)
 
 
-def model(env=_missing):
-    if env is _missing:
-        env = sys._getframe(1).f_locals
-        env = {k:v for k,v in env.items() if isinstance(v, (Resolvable, sympy.Basic))}
-    result = generalized_map(resolve, env)
+def model(context=_missing, what=_missing):
+    if context is _missing:
+        context = sys._getframe(1).f_locals
+    if what is _missing:
+        what = {k:v for k,v in context.items() if isinstance(v, (Resolvable, sympy.Basic))}
+    reverse_context = {id(v):k for (k,v) in context.items()}
+    result = generalized_map(resolve, what, reverse_context)
     if isinstance(result, dict):
         return DictStruct(**result)
     return result
