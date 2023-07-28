@@ -110,9 +110,9 @@ def cos(r): return Operation(sympy.cos, (r,))
 
 
 def cost():
-    capital_cost = Normal(3,1)
+    setup_cost = Normal(3,1)
     operation_cost = 1000
-    total = capital_cost + operation_cost
+    total = setup_cost + operation_cost
     return model()
 
 def benefit():
