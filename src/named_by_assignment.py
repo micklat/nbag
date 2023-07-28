@@ -113,19 +113,19 @@ def cost():
     setup_cost = Normal(3,1)
     operation_cost = 1000
     total = setup_cost + operation_cost
-    return model()
+    return model().total
 
 def benefit():
     x = Normal(0,1)
     total = 1 + x ** 2
-    return model()
+    return model().total
 
 def test():
     from sympy.stats import sample
     x = Normal(0,1)
     y = x*x
     one = sin(x) ** 2 + cos(x) ** 2
-    ratio = cost().total / benefit().total
+    ratio = cost()/ benefit()
     m = model()
     assert sample(m.ratio) > 0
     print("roughly 0:", sample(m.x, size=10000).mean())
