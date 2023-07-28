@@ -91,11 +91,12 @@ def generalized_map(f, x, *args, **kwargs):
     return f(x, *args, **kwargs)
 
 
-def model(context=_missing, what=_missing):
+def model(context=_missing, what=_missing, included=(sympy.Basic,)):
     if context is _missing:
-        context = sys._getframe(1).f_locals
+        context = sys._getframe(1).f_locals # the locals() dict of the caller
     if what is _missing:
-        what = {k:v for k,v in context.items() if isinstance(v, (Resolvable, sympy.Basic))}
+        what = {k:v for k,v in context.items() if 
+                isinstance(v, Resolvable) or isinstance(v, included)}
     reverse_context = {id(v):k for (k,v) in context.items()}
     result = generalized_map(resolve, what, reverse_context)
     if isinstance(result, dict):
