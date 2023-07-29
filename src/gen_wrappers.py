@@ -81,25 +81,27 @@ class WrapperCode:
     imports: list[str]
     definition: str
 
-def wrap_function(f: Callable):
+def wrap_function(f: Callable, module_path: str):
     s = inspect.signature(f)
     if not should_wrap(s): return None
-    qualified_f_name = f.__module__ + "." + f.__name__
+    qualified_f_name = module_path + "." + f.__name__
     params = list(s.parameters.values())[1:] # skip the first parameter which is assumed to be "name"
     args = ArgsGenerator(params)
-    imports = [f.__module__]
+    imports = [module_path]
     actuals = ["assignee_name()"] + args.positional_args() + args.kw_args()
     definition = (f"def {f.__name__}({args.declaration()}):\n"
             +f"    return {qualified_f_name}({', '.join(actuals)})\n")
     return WrapperCode(f.__name__, imports, definition)
 
-def wrap_module(module, dest, names=None):
+def wrap_module(module_path, dest, names=None):
+    from importlib import import_module
+    module = import_module(module_path)
     if names is None:
         names = [name for name in dir(module) if not name.startswith('_')]
 
     objects = {name: getattr(module, name) for name in names}
     functions = {name:v for (name,v) in objects.items() if callable(v)}
-    wrappers = [wrap_function(v) for v in functions.values()]
+    wrappers = [wrap_function(v, module_path) for v in functions.values()]
     wrappers = [w for w in wrappers if w]
 
     imports = sorted(reduce(frozenset.union, [w.imports for w in wrappers], frozenset()))
@@ -126,7 +128,7 @@ def wrap_sympy_stats():
     import sympy.stats
     ensure_module("generated")
     ensure_module("generated/sympy")
-    wrap_module(sympy.stats, "generated/sympy/stats.py")
+    wrap_module('sympy.stats', "generated/sympy/stats.py")
     
 
 if __name__ == '__main__':
