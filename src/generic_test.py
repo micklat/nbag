@@ -1,6 +1,7 @@
 from named_by_assignment import GenericWrapper
 import sympy
 import sympy.stats
+from sympy import sin, cos
 
 Normal = GenericWrapper(sympy.stats.Normal)
 
@@ -25,3 +26,6 @@ def test():
     print("roughly 1:", sample(y, size=1000000).mean())
     print("exactly 1s:", sample(one, size=10))
 
+
+if __name__ == '__main__':
+    test()

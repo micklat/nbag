@@ -19,6 +19,6 @@ class GenericWrapper:
         
     def __call__(self, *args, **kwargs):
         name = assignee_name(2)
-        return self.constructor(name, args, kwargs)
+        return self.constructor(name, *args, **kwargs)
     
 
