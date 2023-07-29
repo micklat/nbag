@@ -3,7 +3,8 @@ from typing import Callable
 import dis, sys, opcode
 
 
-def assignee_name(depth=2) -> str:
+def assignee_name(depth: int = 2) -> str:
+    assert depth>0
     frame = sys._getframe(depth)
     for inst in dis.get_instructions(frame.f_code):
         if inst.offset > frame.f_lasti:
