@@ -88,7 +88,7 @@ def wrap_function(f: Callable):
     params = list(s.parameters.values())[1:] # skip the first parameter which is assumed to be "name"
     args = ArgsGenerator(params)
     imports = [f.__module__]
-    actuals = ["assignee_name(2)"] + args.positional_args() + args.kw_args()
+    actuals = ["assignee_name()"] + args.positional_args() + args.kw_args()
     definition = (f"def {f.__name__}({args.declaration()}):\n"
             +f"    return {qualified_f_name}({', '.join(actuals)})\n")
     return WrapperCode(f.__name__, imports, definition)
@@ -112,10 +112,22 @@ def wrap_module(module, dest, names=None):
             print(w.definition, file=out)
 
 
+def ensure_module(p: str):
+    import os, os.path
+    if not os.path.exists(p):
+        os.mkdir(p)
+    init = os.path.join(p, "__init__.py")
+    if not os.path.exists(init):
+        with open(init,'w'):
+            pass
+
+
 def wrap_sympy_stats():
     import sympy.stats
+    ensure_module("generated")
+    ensure_module("generated/sympy")
     wrap_module(sympy.stats, "generated/sympy/stats.py")
-
+    
 
 if __name__ == '__main__':
     wrap_sympy_stats()
