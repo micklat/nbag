@@ -26,13 +26,13 @@ class AbstractReal(ABC):
         return Operation(operator.truediv, (self, other))
 
 
-class Resolvable(ABC):
+class Identifiable(ABC):
     @abstractmethod
-    def resolve(self, reverse_context):
+    def identify(self, reverse_context):
         ...
 
-def resolve(x, reverse_context):
-    return x.resolve(reverse_context) if isinstance(x, Resolvable) else x
+def identify(x, reverse_context):
+    return x.identify(reverse_context) if isinstance(x, Identifiable) else x
 
 
 class Missing():
@@ -41,33 +41,33 @@ _missing = Missing()
 
 
 @dataclass
-class Operation(AbstractReal, Resolvable):
+class Operation(AbstractReal, Identifiable):
     operator: Callable
     operands: tuple
-    resolved: object = _missing
+    identified: object = _missing
 
-    def resolve(self, reverse_context):
-        if self.resolved is _missing:
-            self.resolved = self.operator(*generalized_map(resolve, self.operands, reverse_context))
-        return self.resolved
+    def identify(self, reverse_context):
+        if self.identified is _missing:
+            self.identified = self.operator(*generalized_map(identify, self.operands, reverse_context))
+        return self.identified
 
 
 @dataclass
-class AutoNamed(AbstractReal, Resolvable):
+class Nameless(AbstractReal, Identifiable):
     constructor: Callable
     args: tuple
     kwargs: Dict[str, object]
-    resolved: object = _missing
+    identified: object = _missing
 
-    def resolve(self, reverse_context):
-        if self.resolved is _missing:
+    def identify(self, reverse_context):
+        if self.identified is _missing:
             name = reverse_context.get(id(self))
             if not name:
                 raise Exception("no name specified by assignment", self)
-            self.resolved = self.constructor(
-                    name, *generalized_map(resolve, self.args, reverse_context), 
-                    **generalized_map(resolve, self.kwargs, reverse_context))
-        return self.resolved
+            self.identified = self.constructor(
+                    name, *generalized_map(identify, self.args, reverse_context), 
+                    **generalized_map(identify, self.kwargs, reverse_context))
+        return self.identified
 
 
 @dataclass
@@ -75,7 +75,7 @@ class Wrapper:
     constructor: Callable
         
     def __call__(self, *args, **kwargs):
-        return AutoNamed(self.constructor, args, kwargs)
+        return Nameless(self.constructor, args, kwargs)
     
 
 class DictStruct:
@@ -96,9 +96,9 @@ def model(context=_missing, what=_missing, included=(sympy.Basic,)):
         context = sys._getframe(1).f_locals # the locals() dict of the caller
     if what is _missing:
         what = {k:v for k,v in context.items() if 
-                isinstance(v, Resolvable) or isinstance(v, included)}
+                isinstance(v, Identifiable) or isinstance(v, included)}
     reverse_context = {id(v):k for (k,v) in context.items()}
-    result = generalized_map(resolve, what, reverse_context)
+    result = generalized_map(identify, what, reverse_context)
     if isinstance(result, dict):
         return DictStruct(**result)
     return result
