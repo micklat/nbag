@@ -19,7 +19,7 @@ def should_wrap(signature: Signature):
 class ArgsGenerator:
     parameters: list[Parameter]
 
-    def declared_args(self, after_pok=[]):
+    def declared_args(self, new_kw_args=[]):
         po_args = []
         pok_args = []
         kwo_args = []
@@ -53,7 +53,7 @@ class ArgsGenerator:
 
         slashes = ["/"] if po_args else []
         stars = ["*"] if (any_kw_only and not any_star) else []
-        return ', '.join(po_args + slashes + pok_args + after_pok + stars + kwo_args)
+        return ', '.join(po_args + slashes + pok_args + new_kw_args + stars + kwo_args)
 
     def pass_positionals(self):
         positional = []
