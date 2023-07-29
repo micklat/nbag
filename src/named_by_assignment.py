@@ -3,13 +3,15 @@ from typing import Callable
 import dis, sys, opcode
 
 
-def assignee_name(frame=2) -> str:
-    if isinstance(frame, int): frame = sys._getframe(frame)
+def assignee_name(depth=2) -> str:
+    frame = sys._getframe(depth)
     for inst in dis.get_instructions(frame.f_code):
         if inst.offset > frame.f_lasti:
-            assert opcode.opname[inst.opcode] in ("STORE_FAST", "STORE_GLOBAL", "STORE_NAME", "STORE_ATTR")            
-            return inst.argval
-    raise Exception("this function should be called as the right-hand-side of an assignment statement")
+            if opcode.opname[inst.opcode] in ("STORE_FAST", "STORE_GLOBAL", "STORE_NAME", "STORE_ATTR"):
+                return inst.argval
+            break 
+    callee = sys._getframe(depth-1).f_code.co_name
+    raise Exception(callee + f" should be called as the right-hand-side of an assignment statement, e.g.: x = {callee}(args...)")
 
 
 @dataclass
