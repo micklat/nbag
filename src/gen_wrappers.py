@@ -18,35 +18,38 @@ def should_wrap(signature: Signature):
 class ArgsGenerator:
     parameters: list[Parameter]
 
-    def declaration(self):
-        args = []
+    def declared_args(self):
+        positional_args = []
+        kw_args = []
         slash_pending = False
         starred = False
         for p in self.parameters:
             if p.kind==p.POSITIONAL_ONLY:
                 slash_pending = True
-            if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD):
-                args.append(f"{p.name}")
+                positional_args.append(p.name)
                 continue
             if slash_pending:
-                args.append("/")
+                positional_args.append("/")
+            if p.kind==p.POSITIONAL_OR_KEYWORD:
+                positional_args.append(p.name)
+                continue
             if p.kind==p.VAR_POSITIONAL:
-                args.append(f"*{p.name}")
+                positional_args.append(f"*" + p.name)
                 starred = True
                 continue
             if p.kind == p.KEYWORD_ONLY:
                 if not starred:
                     args.append("*")
                     starred = True
-                args.append(f"{p.name}={repr(p.default)}")
+                kw_args.append(f"{p.name}={repr(p.default)}")
                 continue
             if p.kind == p.VAR_KEYWORD:
-                args.append(f"**{p.name}")
+                kw_args.append(f"**{p.name}")
                 continue
             assert False 
-        return ", ".join(args)
+        return positional_args, kw_args
 
-    def positional_args(self):
+    def pass_positionals(self):
         positional = []
         for p in self.parameters:
             if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD):
@@ -60,7 +63,7 @@ class ArgsGenerator:
             break
         return positional
         
-    def kw_args(self):
+    def pass_kw(self):
         bindings = []
         for p in self.parameters:
             if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD, p.VAR_POSITIONAL):
@@ -88,9 +91,13 @@ def wrap_function(f: Callable, module_path: str):
     params = list(s.parameters.values())[1:] # skip the first parameter which is assumed to be "name"
     args = ArgsGenerator(params)
     imports = [module_path]
-    actuals = ["assignee_name()"] + args.positional_args() + args.kw_args()
-    definition = (f"def {f.__name__}({args.declaration()}):\n"
-            +f"    return {qualified_f_name}({', '.join(actuals)})\n")
+    wrapper_pos_args, wrapper_kw_args = args.declared_args()
+    wrapper_formal_args = ', '.join(wrapper_pos_args + ["name=None"] + wrapper_kw_args)
+    construct_args = ', '.join([qualified_f_name, "name"] + args.pass_positionals() + args.pass_kw())
+    definition = (
+            f"def {f.__name__}({wrapper_formal_args}):\n"
+            +f"    return construct({construct_args})\n"
+            )
     return WrapperCode(f.__name__, imports, definition)
 
 def wrap_module(module_path, dest, names=None):
@@ -106,7 +113,7 @@ def wrap_module(module_path, dest, names=None):
 
     imports = sorted(reduce(frozenset.union, [w.imports for w in wrappers], frozenset()))
     with open(dest, 'w') as out:
-        print("from named_by_assignment import assignee_name", file=out)
+        print("from named_by_assignment import construct", file=out)
         for module in imports:
             print("import "+module, file=out)
         print("\n", file=out)

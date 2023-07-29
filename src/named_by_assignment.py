@@ -15,6 +15,12 @@ def assignee_name(depth: int = 2) -> str:
     raise Exception(callee + f" should be called as the right-hand-side of an assignment statement, e.g.: x = {callee}(args...)")
 
 
+def construct(f, name, *args, **kwargs):
+    if name is None:
+        name = assignee_name(3)
+    return f(name, *args, **kwargs)
+
+
 @dataclass
 class GenericWrapper:
     constructor: Callable
