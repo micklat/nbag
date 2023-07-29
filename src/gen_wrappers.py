@@ -1,4 +1,5 @@
 from inspect import Signature, Parameter
+import inspect
 import sys
 import inspect
 from functools import reduce
@@ -18,36 +19,41 @@ def should_wrap(signature: Signature):
 class ArgsGenerator:
     parameters: list[Parameter]
 
-    def declared_args(self):
-        positional_args = []
-        kw_args = []
-        slash_pending = False
-        starred = False
+    def declared_args(self, after_pok=[]):
+        po_args = []
+        pok_args = []
+        kwo_args = []
+        any_star = False
+        any_kw_only = False
         for p in self.parameters:
-            if p.kind==p.POSITIONAL_ONLY:
-                slash_pending = True
-                positional_args.append(p.name)
-                continue
-            if slash_pending:
-                positional_args.append("/")
-            if p.kind==p.POSITIONAL_OR_KEYWORD:
-                positional_args.append(p.name)
-                continue
-            if p.kind==p.VAR_POSITIONAL:
-                positional_args.append(f"*" + p.name)
-                starred = True
-                continue
-            if p.kind == p.KEYWORD_ONLY:
-                if not starred:
-                    args.append("*")
-                    starred = True
-                kw_args.append(f"{p.name}={repr(p.default)}")
-                continue
-            if p.kind == p.VAR_KEYWORD:
-                kw_args.append(f"**{p.name}")
-                continue
-            assert False 
-        return positional_args, kw_args
+            s = ""
+            if p.kind == p.POSITIONAL_ONLY:
+                args = po_args
+            elif p.kind == p.POSITIONAL_OR_KEYWORD:
+                args = pok_args
+            elif p.kind == p.VAR_POSITIONAL:
+                args = po_args
+                s += '*'
+                any_star = True
+            elif p.kind == p.KEYWORD_ONLY:
+                args = kwo_args
+                any_kw_only = True
+            elif p.kind == p.VAR_KEYWORD:
+                s += '**'
+                args = kwo_args
+            else:
+                assert False, "unexpected parameter kind: "+repr(p)
+
+            s += p.name
+            if p.annotation is not inspect._empty:
+                s += ':' + str(s.annotation)
+            if p.default is not inspect._empty:
+                s += '=' + repr(p.default)
+            args.append(s) 
+
+        slashes = ["/"] if po_args else []
+        stars = ["*"] if (any_kw_only and not any_star) else []
+        return ', '.join(po_args + slashes + pok_args + after_pok + stars + kwo_args)
 
     def pass_positionals(self):
         positional = []
@@ -91,8 +97,7 @@ def wrap_function(f: Callable, module_path: str):
     params = list(s.parameters.values())[1:] # skip the first parameter which is assumed to be "name"
     args = ArgsGenerator(params)
     imports = [module_path]
-    wrapper_pos_args, wrapper_kw_args = args.declared_args()
-    wrapper_formal_args = ', '.join(wrapper_pos_args + ["name=None"] + wrapper_kw_args)
+    wrapper_formal_args = args.declared_args(["name=None"])
     construct_args = ', '.join([qualified_f_name, "name"] + args.pass_positionals() + args.pass_kw())
     definition = (
             f"def {f.__name__}({wrapper_formal_args}):\n"
