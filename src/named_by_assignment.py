@@ -8,7 +8,8 @@ def assignee_name(depth: int = 2) -> str:
     frame = sys._getframe(depth)
     for inst in dis.get_instructions(frame.f_code):
         if inst.offset > frame.f_lasti:
-            if opcode.opname[inst.opcode] in ("STORE_FAST", "STORE_GLOBAL", "STORE_NAME", "STORE_ATTR"):
+            # TODO: support STORE_ATTR
+            if opcode.opname[inst.opcode] in ("STORE_FAST", "STORE_GLOBAL", "STORE_NAME"):
                 return inst.argval
             break 
     callee = sys._getframe(depth-1).f_code.co_name
