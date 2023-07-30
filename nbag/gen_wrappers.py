@@ -128,7 +128,8 @@ def wrap_module_functions(module, dest, names=None, lower_names=True):
 
     imports = sorted(reduce(frozenset.union, [w.imports for w in wrappers], frozenset()))
     with open(dest, 'w') as out:
-        print("from named_by_assignment import construct", file=out)
+        print(f"from {module_path} import *", file=out)
+        print("from nbag import construct", file=out)
         for module in imports:
             print("import "+module, file=out)
         print("\n", file=out)
@@ -159,11 +160,11 @@ def ispackage(m):
 
 PACKAGE_PREFIX = "nba_" # short for "named by assignment"
 
-def wrap_module(module_name):
+def wrap_module(module_name: str, dest_dir: str) -> None:
     module = import_module(module_name)
     wrapped_package = module_name.split('.')[0] # e.g. "sympy"
     wrapper_package = PACKAGE_PREFIX + wrapped_package # e.g. "nba_sympy"
-    wrapper_path = ("generated." + PACKAGE_PREFIX + module_name).replace(".", os.path.sep) 
+    wrapper_path = os.path.join(dest_dir, *(PACKAGE_PREFIX + module_name).split('.'))
     if ispackage(module):
         wrapper_path += os.path.sep + "__init__.py"
     else:
@@ -171,8 +172,4 @@ def wrap_module(module_name):
     ensure_containing_package(wrapper_path)
     wrap_module_functions(module, wrapper_path)
     
-
-if __name__ == '__main__':
-    wrap_module("sympy")
-    wrap_module("sympy.stats")
 
