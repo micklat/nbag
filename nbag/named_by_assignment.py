@@ -13,7 +13,9 @@ def assignee_name(depth: int = 2) -> str:
                 return inst.argval
             break 
     callee = sys._getframe(depth-1).f_code.co_name
-    raise Exception(callee + f" should be called as the right-hand-side of an assignment statement, e.g.: x = {callee}(args...)")
+    raise Exception(f"""Could not assign name automatically. 
+                    {callee} should be called as the right-hand-side of an assignment statement, e.g.: x = {callee}(args...).
+                    Alternatively, use the name argument to specify the name explicitly.""")
 
 
 def construct(f, name, *args, **kwargs):
