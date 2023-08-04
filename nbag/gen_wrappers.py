@@ -53,7 +53,7 @@ class ArgsGenerator:
 
             s += p.name
             if p.annotation is not inspect._empty:
-                s += ':' + str(s.annotation)
+                s += ':' + str(p.annotation)
             if p.default is not inspect._empty:
                 s += '=' + repr(p.default)
             args.append(s) 
@@ -69,7 +69,6 @@ class ArgsGenerator:
                 positional.append(p.name)
                 continue
             if p.kind==p.VAR_POSITIONAL:
-                if not positional: return p.name
                 positional.append(f"*{p.name}")
                 break
             assert p.kind in (p.VAR_KEYWORD, p.KEYWORD_ONLY)
@@ -82,7 +81,7 @@ class ArgsGenerator:
             if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD, p.VAR_POSITIONAL):
                 continue
             if p.kind == p.KEYWORD_ONLY:
-                bindings.append(f"{repr(p.name)}: {p.name}")
+                bindings.append(f"{p.name}={p.name}")
                 continue
             if p.kind == p.VAR_KEYWORD:
                 bindings.append(f"**{p.name}")
