@@ -146,10 +146,10 @@ def ensure_package(p: str):
             pass
 
 
-def ensure_containing_package(p: str):
+def ensure_containing_package(p: str, stop_at_prefix: str):
     prefix = p.rpartition(os.path.sep)[0]
-    if prefix:
-        ensure_containing_package(prefix)
+    if len(prefix) > len(stop_at_prefix):
+        ensure_containing_package(prefix, stop_at_prefix)
         ensure_package(prefix)
 
 
@@ -168,7 +168,7 @@ def wrap_module(module_name: str, dest_dir: str) -> None:
         wrapper_path += os.path.sep + "__init__.py"
     else:
         wrapper_path += ".py"
-    ensure_containing_package(wrapper_path)
+    ensure_containing_package(wrapper_path, dest_dir)
     wrap_module_functions(module, wrapper_path)
     
 
