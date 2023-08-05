@@ -39,7 +39,7 @@ class ArgsGenerator:
             elif p.kind == p.POSITIONAL_OR_KEYWORD:
                 args = pok_args
             elif p.kind == p.VAR_POSITIONAL:
-                args = po_args
+                args = pok_args # python disallows "*args" before "/", strangely.
                 s += '*'
                 any_star = True
             elif p.kind == p.KEYWORD_ONLY:
@@ -52,8 +52,8 @@ class ArgsGenerator:
                 assert False, "unexpected parameter kind: "+repr(p)
 
             s += p.name
-            if p.annotation is not inspect._empty:
-                s += ':' + str(p.annotation)
+#             if p.annotation is not inspect._empty:
+#                s += ':' + str(p.annotation)
             if p.default is not inspect._empty:
                 s += '=' + repr(p.default)
             args.append(s) 
@@ -115,7 +115,7 @@ def wrap_function(f: Callable, module_path: str, lower_name: bool):
             )
     return WrapperCode(f.__name__, wrapper_name, imports, definition)
 
-def wrap_module_functions(module, dest, names=None, lower_names=True):
+def wrap_module_functions(module, out, names=None, lower_names=True):
     module_path = module.__name__
     if names is None:
         names = [name for name in dir(module) if not name.startswith('_')]
@@ -126,14 +126,14 @@ def wrap_module_functions(module, dest, names=None, lower_names=True):
     wrappers = [w for w in wrappers if w]
 
     imports = sorted(reduce(frozenset.union, [w.imports for w in wrappers], frozenset()))
-    with open(dest, 'w') as out:
-        print(f"from {module_path} import *", file=out)
-        print("from nbag import construct", file=out)
-        for module in imports:
-            print("import "+module, file=out)
-        print("\n", file=out)
-        for w in wrappers:
-            print(w.definition, file=out)
+
+    print(f"from {module_path} import *", file=out)
+    print("from nbag import construct", file=out)
+    for module in imports:
+        print("import "+module, file=out)
+    print("\n", file=out)
+    for w in wrappers:
+        print(w.definition, file=out)
 
 
 def ensure_package(p: str):
@@ -159,7 +159,7 @@ def ispackage(m):
 
 PACKAGE_PREFIX = "nba_" # short for "named by assignment"
 
-def wrap_module(module_name: str, dest_dir: str) -> None:
+def wrap_module(module_name: str, dest_dir: str, header: list[str]) -> None:
     module = import_module(module_name)
     wrapped_package = module_name.split('.')[0] # e.g. "sympy"
     wrapper_package = PACKAGE_PREFIX + wrapped_package # e.g. "nba_sympy"
@@ -169,6 +169,10 @@ def wrap_module(module_name: str, dest_dir: str) -> None:
     else:
         wrapper_path += ".py"
     ensure_containing_package(wrapper_path, dest_dir)
-    wrap_module_functions(module, wrapper_path)
+
+    with open(wrapper_path, 'w') as out:
+        for s in header:
+            print(s, file=out)
+        wrap_module_functions(module, out)
     
 
